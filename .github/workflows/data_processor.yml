@@ -1,14 +1,35 @@
-name: Instagram Data Processor
+
+name: Instagram Real-Time Data Processor
 
 on:
+  # Automatic schedule (every 5 minutes)  
   schedule:
-    - cron: '*/5 * * * *'  # Every 5 minutes
-  workflow_dispatch:       # Manual trigger
+    - cron: '*/5 * * * *'
+
+  # Manual trigger for instant refresh
+  workflow_dispatch:
+    inputs:
+      force_refresh:
+        description: 'Force refresh all URLs (including already processed ones)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+        - 'false'
+        - 'true'
+      processing_speed:
+        description: 'Processing speed'
+        required: false
+        default: 'fast'
+        type: choice
+        options:
+        - 'fast'
+        - 'normal'
 
 jobs:
-  process-instagram-data:
+  process-instagram-data-realtime:
     runs-on: ubuntu-latest
-    name: Process Instagram URLs
+    name: Real-Time Instagram Data Processing
 
     steps:
     - name: Checkout Repository
@@ -19,13 +40,22 @@ jobs:
       with:
         python-version: '3.9'
 
-    - name: Install Dependencies
+    - name: Install Dependencies (Fast Mode)
       run: |
-        pip install instaloader gspread google-auth google-auth-oauthlib google-auth-httplib2
+        pip install --upgrade pip
+        pip install instaloader gspread google-auth google-auth-oauthlib google-auth-httplib2 --no-cache-dir
 
-    - name: Execute Data Extraction
+    - name: Execute Real-Time Data Extraction
       env:
         SHEET_ID: ${{ secrets.SHEET_ID }}
         CREDENTIALS_JSON: ${{ secrets.CREDENTIALS_JSON }}
-      run: python instagram_data_extractor.py
-      timeout-minutes: 10
+        FORCE_REFRESH: ${{ github.event.inputs.force_refresh || 'false' }}
+        PROCESSING_SPEED: ${{ github.event.inputs.processing_speed || 'fast' }}
+      run: python instagram_realtime_extractor.py
+      timeout-minutes: 15
+
+    - name: Processing Complete
+      run: |
+        echo "⚡ Real-time Instagram data extraction completed!"
+        echo "🎉 Check your Google Sheet for fresh data!"
+        echo "📊 All URLs in Column A have been processed"
