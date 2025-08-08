@@ -1,9 +1,6 @@
-"""
-Instagram Data Extractor - Professional Edition
-Author: AI Assistant
-Version: 1.0
-Purpose: Extract Instagram post data and save to Google Sheets automatically
-"""
+
+# 🚀 REAL-TIME INSTAGRAM DATA FETCHER
+# Instant refresh when you manually trigger it!
 
 import instaloader
 import gspread
@@ -20,8 +17,8 @@ from typing import Optional, Dict, Any
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-class InstagramDataExtractor:
-    """Professional Instagram data extraction service"""
+class RealTimeInstagramExtractor:
+    """Real-time Instagram data extraction with instant processing"""
 
     def __init__(self, sheet_id: str, credentials_json: str):
         self.sheet_id = sheet_id
@@ -29,20 +26,23 @@ class InstagramDataExtractor:
         self.instagram_loader = None
         self.google_sheet = None
         self.worksheet = None
+        self.force_refresh = os.environ.get('FORCE_REFRESH', 'false').lower() == 'true'
 
         self._initialize_services()
 
     def _initialize_services(self):
         """Initialize Instagram and Google Sheets services"""
         try:
-            # Initialize Instagram loader
+            # Initialize Instagram loader with faster settings
             self.instagram_loader = instaloader.Instaloader(
                 download_pictures=False,
                 download_videos=False,
                 save_metadata=False,
-                quiet=True
+                quiet=True,
+                compress_json=False,
+                max_connection_attempts=3  # Faster connection attempts
             )
-            logger.info("✅ Instagram service initialized")
+            logger.info("⚡ Instagram service initialized (fast mode)")
 
             # Initialize Google Sheets
             scopes = [
@@ -58,18 +58,18 @@ class InstagramDataExtractor:
             self.worksheet = self.google_sheet.get_worksheet(0)
 
             self._setup_sheet_headers()
-            logger.info("✅ Google Sheets service initialized")
+            logger.info("⚡ Google Sheets service initialized (fast mode)")
 
         except Exception as e:
             logger.error(f"❌ Service initialization failed: {e}")
             raise
 
     def _setup_sheet_headers(self):
-        """Setup professional sheet headers"""
+        """Setup professional sheet headers with refresh indicator"""
         headers = [
-            'Instagram URL', 'Account Name', 'Likes Count', 'Comments Count', 
-            'Views Count', 'Content Type', 'Posted Date', 'Caption Text', 
-            'Hashtags Count', 'Location', 'Processing Time', 'Status'
+            '📱 Instagram URL', '👤 Account', '❤️ Likes', '💬 Comments', 
+            '👁️ Views', '🎬 Type', '📅 Posted Date', '📝 Caption', 
+            '🏷️ Hashtags', '📍 Location', '⚡ Last Updated', '✅ Status'
         ]
 
         try:
@@ -79,14 +79,21 @@ class InstagramDataExtractor:
                 self.worksheet.clear()
                 self.worksheet.append_row(headers)
 
-                # Format headers professionally
+                # Format headers with real-time indicator
                 self.worksheet.format('A1:L1', {
-                    'backgroundColor': {'red': 0.1, 'green': 0.3, 'blue': 0.7},
+                    'backgroundColor': {'red': 0.0, 'green': 0.8, 'blue': 0.4},  # Green for real-time
                     'textFormat': {'bold': True, 'foregroundColor': {'red': 1, 'green': 1, 'blue': 1}},
                     'horizontalAlignment': 'CENTER'
                 })
 
-                logger.info("✅ Sheet headers configured")
+                # Add refresh instructions
+                self.worksheet.update('N1', '🔄 Manual Refresh: Run GitHub Action')
+                self.worksheet.format('N1', {
+                    'backgroundColor': {'red': 1.0, 'green': 0.6, 'blue': 0.0},
+                    'textFormat': {'bold': True, 'foregroundColor': {'red': 1, 'green': 1, 'blue': 1}}
+                })
+
+                logger.info("⚡ Real-time sheet headers configured")
 
         except Exception as e:
             logger.error(f"❌ Header setup failed: {e}")
@@ -106,7 +113,7 @@ class InstagramDataExtractor:
         return None
 
     def extract_post_data(self, url: str) -> tuple[Optional[Dict[str, Any]], str]:
-        """Extract comprehensive data from Instagram post"""
+        """Extract comprehensive data from Instagram post (optimized for speed)"""
         try:
             shortcode = self.extract_shortcode(url)
             if not shortcode:
@@ -114,7 +121,8 @@ class InstagramDataExtractor:
 
             post = instaloader.Post.from_shortcode(self.instagram_loader.context, shortcode)
 
-            # Extract comprehensive post data
+            # Extract data with real-time timestamp
+            current_time = datetime.now()
             post_data = {
                 'account_name': f"@{post.owner_username}",
                 'likes_count': f"{post.likes:,}",
@@ -125,15 +133,12 @@ class InstagramDataExtractor:
                 'caption_text': self._clean_caption(post.caption),
                 'hashtags_count': len(re.findall(r'#\w+', post.caption)) if post.caption else 0,
                 'location': post.location.name if post.location else 'Not specified',
-                'processing_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'last_updated': current_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'processing_time': current_time.strftime('%Y-%m-%d %H:%M:%S')
             }
 
             return post_data, "SUCCESS"
 
-        except instaloader.exceptions.PostUnavailableException:
-            return None, "POST_NOT_FOUND"
-        except instaloader.exceptions.LoginRequiredException:
-            return None, "LOGIN_REQUIRED"
         except Exception as e:
             logger.error(f"Data extraction failed for {url}: {e}")
             return None, "EXTRACTION_ERROR"
@@ -143,13 +148,9 @@ class InstagramDataExtractor:
         if not caption:
             return "No caption"
 
-        # Remove excessive whitespace and newlines
         cleaned = ' '.join(caption.split())
-
-        # Truncate if too long for spreadsheet display
-        if len(cleaned) > 150:
-            return cleaned[:150] + "..."
-
+        if len(cleaned) > 100:
+            return cleaned[:100] + "..."
         return cleaned
 
     def update_sheet_row(self, row_number: int, url: str, data: Optional[Dict], status: str):
@@ -167,18 +168,17 @@ class InstagramDataExtractor:
                     data['caption_text'],
                     data['hashtags_count'],
                     data['location'],
-                    data['processing_time'],
-                    "✅ Success"
+                    data['last_updated'],
+                    "⚡ Fresh Data"
                 ]
             else:
-                # Keep URL, clear other data, show error status
                 status_messages = {
-                    "INVALID_URL": "❌ Invalid URL format",
-                    "POST_NOT_FOUND": "❌ Post not found or private",
-                    "LOGIN_REQUIRED": "❌ Login required",
-                    "EXTRACTION_ERROR": "❌ Processing error"
+                    "INVALID_URL": "❌ Invalid URL",
+                    "POST_NOT_FOUND": "❌ Not found",
+                    "LOGIN_REQUIRED": "❌ Private post",
+                    "EXTRACTION_ERROR": "❌ Error"
                 }
-                row_data = [url] + [''] * 10 + [status_messages.get(status, "❌ Unknown error")]
+                row_data = [url] + [''] * 10 + [status_messages.get(status, "❌ Error")]
 
             self.worksheet.update(f'A{row_number}:L{row_number}', [row_data])
             return True
@@ -187,9 +187,9 @@ class InstagramDataExtractor:
             logger.error(f"Sheet update failed for row {row_number}: {e}")
             return False
 
-    def process_all_urls(self) -> int:
-        """Process all URLs in the spreadsheet"""
-        logger.info("🚀 Starting data extraction process")
+    def process_all_urls_realtime(self) -> int:
+        """Process all URLs with real-time refresh capability"""
+        logger.info("⚡ Starting REAL-TIME data extraction")
 
         try:
             all_data = self.worksheet.get_all_values()
@@ -199,61 +199,73 @@ class InstagramDataExtractor:
                 return 0
 
             processed_count = 0
+            total_urls = 0
 
+            # Count total URLs first
+            for row in all_data[1:]:
+                if row and row[0].strip():
+                    total_urls += 1
+
+            logger.info(f"🔍 Found {total_urls} URLs to process")
+
+            # Process each URL with minimal delay for real-time feel
             for row_index, row in enumerate(all_data[1:], start=2):
                 if not row or not row[0].strip():
                     continue
 
                 url = row[0].strip()
 
-                # Skip if already processed successfully
-                if len(row) >= 12 and "✅ Success" in str(row[11]):
+                # Process ALL URLs if force refresh, or skip already processed ones
+                should_process = self.force_refresh or (len(row) < 12 or "⚡ Fresh Data" not in str(row[11]))
+
+                if not should_process:
                     continue
 
-                logger.info(f"📱 Processing: {url}")
+                logger.info(f"⚡ Processing URL {processed_count + 1}/{total_urls}: {url}")
 
-                # Extract Instagram data
+                # Extract Instagram data with minimal delay
                 data, status = self.extract_post_data(url)
 
-                # Update spreadsheet
+                # Update spreadsheet immediately
                 if self.update_sheet_row(row_index, url, data, status):
                     processed_count += 1
 
                     if status == "SUCCESS":
                         logger.info(f"✅ {data['account_name']}: {data['likes_count']} likes, {data['comments_count']} comments")
                     else:
-                        logger.warning(f"⚠️ Failed to process: {status}")
+                        logger.warning(f"⚠️ Failed: {status}")
 
-                # Rate limiting delay
-                time.sleep(2)
+                # Minimal delay for real-time processing (0.5 seconds instead of 2)
+                time.sleep(0.5)
 
-            logger.info(f"🎉 Processing complete: {processed_count} URLs processed")
+            # Update refresh timestamp
+            self.worksheet.update('N2', f'Last Refresh: {datetime.now().strftime("%H:%M:%S")}')
+
+            logger.info(f"⚡ REAL-TIME processing complete: {processed_count} URLs updated")
             return processed_count
 
         except Exception as e:
-            logger.error(f"❌ Processing failed: {e}")
+            logger.error(f"❌ Real-time processing failed: {e}")
             return 0
 
 def main():
-    """Main execution function"""
-    # Get configuration from environment variables
+    """Main execution function for real-time processing"""
     sheet_id = os.environ.get('SHEET_ID')
     credentials_json = os.environ.get('CREDENTIALS_JSON')
 
-    if not sheet_id:
-        logger.error("❌ SHEET_ID environment variable not found")
-        return
-
-    if not credentials_json:
-        logger.error("❌ CREDENTIALS_JSON environment variable not found")
+    if not sheet_id or not credentials_json:
+        logger.error("❌ Required environment variables not found")
         return
 
     try:
-        extractor = InstagramDataExtractor(sheet_id, credentials_json)
-        processed_count = extractor.process_all_urls()
+        extractor = RealTimeInstagramExtractor(sheet_id, credentials_json)
+        processed_count = extractor.process_all_urls_realtime()
 
-        logger.info(f"✅ Extraction completed successfully")
-        logger.info(f"📊 Total URLs processed: {processed_count}")
+        logger.info(f"⚡ REAL-TIME extraction completed!")
+        logger.info(f"📊 URLs processed: {processed_count}")
+
+        if processed_count > 0:
+            logger.info("🎉 Fresh Instagram data is now available in your sheet!")
 
     except Exception as e:
         logger.error(f"❌ Application error: {e}")
