@@ -1,0 +1,47 @@
+
+name: Single URL Instagram Processor
+
+on:
+  # High frequency - every 2 minutes to process URLs one by one
+  schedule:
+    - cron: '*/2 * * * *'
+
+  # Manual trigger
+  workflow_dispatch:
+
+  # API trigger for Apps Script
+  repository_dispatch:
+    types: [single-url-extraction]
+
+jobs:
+  single-url-processing:
+    runs-on: ubuntu-latest
+    name: Process Single Instagram URL
+    timeout-minutes: 5
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Python Environment
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Dependencies
+      run: |
+        pip install --upgrade pip
+        pip install instaloader gspread google-auth google-auth-oauthlib google-auth-httplib2 pytz
+
+    - name: Process Single Instagram URL
+      env:
+        SHEET_ID: ${{ secrets.SHEET_ID }}
+        CREDENTIALS_JSON: ${{ secrets.CREDENTIALS_JSON }}
+      run: python instagram_single_url_processor.py
+      timeout-minutes: 4
+
+    - name: Single URL Processing Complete
+      run: |
+        echo "✅ Single URL processing completed"
+        echo "🔄 Next URL will be processed in 2 minutes"
+        echo "📱 One URL per session prevents Instagram blocking"
