@@ -1,0 +1,49 @@
+
+name: Professional Instagram Data Extractor
+
+on:
+  # Automatic processing every 10 minutes (more reliable for multiple URLs)
+  schedule:
+    - cron: '*/10 * * * *'
+
+  # Manual trigger for immediate processing
+  workflow_dispatch:
+    inputs:
+      force_refresh:
+        description: 'Force refresh all URLs'
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  extract-instagram-data:
+    runs-on: ubuntu-latest
+    name: Professional Instagram Data Processing
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Python Environment
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Dependencies
+      run: |
+        pip install --upgrade pip
+        pip install instaloader gspread google-auth google-auth-oauthlib google-auth-httplib2 pytz
+
+    - name: Execute Professional Instagram Extractor
+      env:
+        SHEET_ID: ${{ secrets.SHEET_ID }}
+        CREDENTIALS_JSON: ${{ secrets.CREDENTIALS_JSON }}
+      run: python instagram_extractor_professional.py
+      timeout-minutes: 25
+
+    - name: Processing Complete
+      run: |
+        echo "✅ Professional Instagram data extraction completed"
+        echo "📊 Check your Google Sheet for updated data with IST timestamps"
+        echo "🔄 All URLs processed for real-time data updates"
