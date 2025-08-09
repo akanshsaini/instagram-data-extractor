@@ -1,0 +1,32 @@
+
+name: Working Instagram Data Extractor
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  extract-data:
+    runs-on: ubuntu-latest
+    name: Extract Instagram Data
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Dependencies
+      run: |
+        pip install instaloader gspread google-auth pytz
+
+    - name: Run Working Extractor
+      env:
+        SHEET_ID: ${{ secrets.SHEET_ID }}
+        CREDENTIALS_JSON: ${{ secrets.CREDENTIALS_JSON }}
+      run: python instagram_extractor_working.py
+      timeout-minutes: 20
